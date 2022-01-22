@@ -1,11 +1,31 @@
-import React, { Component } from "react";
-import SimpleStorageContract from "./contracts/SimpleStorage.json";
-import getWeb3 from "./getWeb3";
+import React, { Component } from 'react';
+import TodoList from './contracts/TodoList.json';
+import getWeb3 from './getWeb3';
+import {
+  Navbar,
+  Container,
+  Form,
+  Button,
+  ListGroup,
+  ButtonGroup,
+  ToggleButton,
+  Row,
+  Col,
+  Table,
+} from 'react-bootstrap';
+import 'bootstrap/dist/css/bootstrap.min.css';
 
-import "./App.css";
+import './App.css';
 
 class App extends Component {
-  state = { storageValue: 0, web3: null, accounts: null, contract: null };
+  state = {
+    storageValue: 0,
+    web3: null,
+    account: null,
+    contract: null,
+    totalCount: 0,
+    listItems: [],
+  };
 
   componentDidMount = async () => {
     try {
@@ -17,35 +37,53 @@ class App extends Component {
 
       // Get the contract instance.
       const networkId = await web3.eth.net.getId();
-      const deployedNetwork = SimpleStorageContract.networks[networkId];
+      const deployedNetwork = TodoList.networks[networkId];
       const instance = new web3.eth.Contract(
-        SimpleStorageContract.abi,
-        deployedNetwork && deployedNetwork.address,
+        TodoList.abi,
+        deployedNetwork && deployedNetwork.address
       );
 
       // Set web3, accounts, and contract to the state, and then proceed with an
       // example of interacting with the contract's methods.
-      this.setState({ web3, accounts, contract: instance }, this.runExample);
+      this.setState({ web3, account: accounts[0], contract: instance });
+      this.showList();
     } catch (error) {
       // Catch any errors for any of the above operations.
       alert(
-        `Failed to load web3, accounts, or contract. Check console for details.`,
+        `Failed to load web3, accounts, or contract. Check console for details.`
       );
       console.error(error);
     }
   };
 
-  runExample = async () => {
-    const { accounts, contract } = this.state;
+  showList = async () => {
+    const totalCount = await this.state.contract.methods.getTotalCount().call();
+    if (totalCount > 0) {
+      var listItems = [];
+      for (var i = 0; i < totalCount; i++) {
+        var item = await this.state.contract.methods.getItem(i + 1).call();
+        listItems.push({ id: item[0], text: item[1], isCompleted: item[2] });
+      }
+    }
+    this.setState({ totalCount, listItems });
+  };
 
-    // Stores a given value, 5 by default.
-    await contract.methods.set(5).send({ from: accounts[0] });
+  toggleComplete = async (e, _id) => {
+    e.preventDefault();
+    var id = _id;
+    await this.state.contract.methods
+      .toggleCompleted(id)
+      .send({ from: this.state.account });
+    await this.showList();
+  };
 
-    // Get the value from the contract to prove it worked.
-    const response = await contract.methods.get().call();
-
-    // Update state with the result.
-    this.setState({ storageValue: response });
+  handleSubmit = async (e) => {
+    e.preventDefault();
+    var text = e.currentTarget[0].value;
+    await this.state.contract.methods
+      .addItem(text)
+      .send({ from: this.state.account });
+    await this.showList();
   };
 
   render() {
@@ -53,18 +91,84 @@ class App extends Component {
       return <div>Loading Web3, accounts, and contract...</div>;
     }
     return (
-      <div className="App">
-        <h1>Good to Go!</h1>
-        <p>Your Truffle Box is installed and ready.</p>
-        <h2>Smart Contract Example</h2>
-        <p>
-          If your contracts compiled and migrated successfully, below will show
-          a stored value of 5 (by default).
-        </p>
-        <p>
-          Try changing the value stored on <strong>line 42</strong> of App.js.
-        </p>
-        <div>The stored value is: {this.state.storageValue}</div>
+      <div className='App'>
+        <div>
+          <Navbar bg='dark' variant='dark'>
+            <Container>
+              <Navbar.Brand href='#'>
+                Ethereum Based Blockchain Todo-List
+              </Navbar.Brand>
+              <Navbar.Toggle />
+              <Navbar.Collapse className='justify-content-end'>
+                <Navbar.Text>
+                  Signed in as: <a href='#'>{this.state.account}</a>
+                </Navbar.Text>
+              </Navbar.Collapse>
+            </Container>
+          </Navbar>
+          <Container fluid='md'>
+            <Row>
+              <Col>
+                <Form onSubmit={this.handleSubmit}>
+                  <Form.Group className='mb-3'>
+                    <Form.Control
+                      type='text'
+                      style={{
+                        width: '20%',
+                        margin: '20px auto 10px auto',
+                        display: 'inline-block',
+                      }}
+                      placeholder='Enter Task Here'
+                    />
+                    <Button variant='primary' type='submit'>
+                      Submit
+                    </Button>
+                  </Form.Group>
+                </Form>
+              </Col>
+            </Row>
+            <Row>
+              <Col>
+                <Container>Your Todo List Items </Container>
+                <Container>
+                  {this.state.totalCount > 0 ? (
+                    <Table striped bordered hover>
+                      <thead>
+                        <tr>
+                          <th>Completed</th>
+                          <th>Task</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {this.state.listItems.map((item, index) => {
+                          console.log(item);
+                          return (
+                            <tr style={{ width: '10%' }}>
+                              <td>
+                                <input
+                                  type='checkbox'
+                                  checked={item.isCompleted}
+                                  onChange={(e) => {
+                                    this.toggleComplete(e, item.id);
+                                  }}
+                                />
+                              </td>
+                              <td style={{ width: '90%', textAlign: 'left' }}>
+                                {item.text}
+                              </td>
+                            </tr>
+                          );
+                        })}
+                      </tbody>
+                    </Table>
+                  ) : (
+                    'List Empty ! Add Some Tasks'
+                  )}
+                </Container>
+              </Col>
+            </Row>
+          </Container>
+        </div>
       </div>
     );
   }
