@@ -83,6 +83,7 @@ class App extends Component {
     await this.state.contract.methods
       .addItem(text)
       .send({ from: this.state.account });
+    e.target[0].value = '';
     await this.showList();
   };
 
@@ -141,9 +142,8 @@ class App extends Component {
                       </thead>
                       <tbody>
                         {this.state.listItems.map((item, index) => {
-                          console.log(item);
                           return (
-                            <tr style={{ width: '10%' }}>
+                            <tr key={item.id} style={{ width: '10%' }}>
                               <td>
                                 <input
                                   type='checkbox'
@@ -154,7 +154,11 @@ class App extends Component {
                                 />
                               </td>
                               <td style={{ width: '90%', textAlign: 'left' }}>
-                                {item.text}
+                                {item.isCompleted ? (
+                                  <strike>{item.text}</strike>
+                                ) : (
+                                  item.text
+                                )}
                               </td>
                             </tr>
                           );
