@@ -6,12 +6,10 @@ import {
   Container,
   Form,
   Button,
-  ListGroup,
-  ButtonGroup,
-  ToggleButton,
   Row,
   Col,
   Table,
+  Alert,
 } from 'react-bootstrap';
 import 'bootstrap/dist/css/bootstrap.min.css';
 
@@ -25,6 +23,7 @@ class App extends Component {
     contract: null,
     totalCount: 0,
     listItems: [],
+    alert: { show: false },
   };
 
   componentDidMount = async () => {
@@ -47,6 +46,18 @@ class App extends Component {
       // example of interacting with the contract's methods.
       this.setState({ web3, account: accounts[0], contract: instance });
       this.showList();
+      this.state.contract.events.ItemAdded().on('data', (event) => {
+        this.showNotification(
+          'Task has been added to your Todo-List',
+          'success'
+        );
+      });
+      this.state.contract.events.TaskCompleted().on('data', (event) => {
+        var text = `Task ${event.returnValues.id} has been marked - ${
+          event.returnValues.completed === true ? 'Completed' : 'To be done'
+        }`;
+        this.showNotification(text, 'success');
+      });
     } catch (error) {
       // Catch any errors for any of the above operations.
       alert(
@@ -87,6 +98,13 @@ class App extends Component {
     await this.showList();
   };
 
+  showNotification = (text, variant) => {
+    this.setState({ alert: { show: true, text, variant } });
+    setInterval(() => {
+      this.setState({ alert: { show: false } });
+    }, 5000);
+  };
+
   render() {
     if (!this.state.web3) {
       return <div>Loading Web3, accounts, and contract...</div>;
@@ -107,6 +125,19 @@ class App extends Component {
               </Navbar.Collapse>
             </Container>
           </Navbar>
+          {this.state.alert.show && this.state.alert.show === true && (
+            <Alert
+              variant={this.state.alert.variant}
+              style={{
+                zIndex: '20',
+                transform: 'translate(0,20%)',
+                width: '50%',
+                margin: 'auto',
+              }}
+            >
+              <Alert.Heading>{this.state.alert.text}</Alert.Heading>
+            </Alert>
+          )}
           <Container fluid='md'>
             <Row>
               <Col>
