@@ -102,7 +102,7 @@ class App extends Component {
     this.setState({ alert: { show: true, text, variant } });
     setInterval(() => {
       this.setState({ alert: { show: false } });
-    }, 5000);
+    }, 10000);
   };
 
   render() {
